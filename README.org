@@ -1,0 +1,49 @@
+#+title: Org (ASCII) ANSI
+#+author: tecosaur
+#+options: toc:nil title:nil num:nil
+
+You know those fancy shell scripts that produce colourful and pretty output?
+
+Well, I *was* jealous. Not any more though --- I've taken Org's ASCII exporter and
+added [[https://en.wikipedia.org/wiki/ANSI_escape_code][ANSI escape codes]] all over the place.
+
+You can now write a /gougeous/ CLI help page in Org and use this to export it for
+inclusion. Then you can use =ox-pandox= to create a man page, /and/
+~org-html-org-export-to-html~ for online documentation.
+
+One could term this the /holy trinity/ of script documentation 😉.
+
+* Instillation
+** Straight
+#+begin_src emacs-lisp
+(use-package ox-ansi
+  :straight (:host github :repo "tecosaur/ox-ansi"))
+#+end_src
+** Doom
+#+begin_src emacs-lisp
+;; $DOOMDIR/packages.el
+(package! ox-ansi
+  :recipe (:host github :repo "tecosaur/ox-ansi"))
+
+;; $DOOMDIR/config.el
+(use-package! ox-ansi :after org)
+#+end_src
+
+* Dependences
++ ~sed~
+
+For some reason I seem to have issues directly outputting ASCII escape
+characters, and so I rely on ~sed~ for some light post-processing (for the
+write-to-file option, write-to-buffer uses ~replace-re-search-forward~).
+
+* Notable variables
+In addition to most of the ~ox-ascii~ settings (renamed), there are a few extra
+configuration points.
+
++ =org-ansi-box-style= :: Set the style of the surrounding box used for code
+  excerpts (among other blocks).
++ =org-ansi-use-face-colours= :: Whether to grab foreground/background
+  information about headlines, links, etc. and use them in the output.
++ =org-ansi-color-mode= :: What sort of terminal compatibly / colour space
+  to target. Supports 3-bit (8 colour), 4-bit (16 colour), 8-bit (256 colour),
+  and 24-bit (16m colour) options.
