@@ -659,6 +659,108 @@ are collateral damage from \"[0m\"."
          (face-str (if face (org-ansi--face-code face default) "")))
     (concat face-str content (if (string= face-str "") "" "\uE000[0m"))))
 
+;;;;; Color conversion
+
+(defun org-ansi--color-to-ansi (color &optional background)
+  (if (eq color 'unspecified) nil
+    (apply (pcase org-ansi-color-mode
+             ((or '3-bit '8-color) #'org-ansi--color-3bit-code)
+             ((or '4-bit '16-color) #'org-ansi--color-4bit-code)
+             ((or '8-bit '256-color) #'org-ansi--color-8bit-code)
+             ((or '24-bit '16m-color) #'org-ansi--color-24bit-code))
+           (append (mapcar (lambda (c) (/ c 257)) (color-values color)) (list background)))))
+
+(defun org-ansi--color-dist-squared (reference rgb)
+  "Squared L2 distance between a REFERENCE and RBG values, each a list of 3 values (r g b)."
+  (+ (* (nth 0 reference)
+        (nth 0 rgb))
+     (* (nth 1 reference)
+        (nth 1 rgb))
+     (* (nth 2 reference)
+        (nth 2 rgb))))
+
+;;;;;; 3-bit / 8-color
+
+(defun org-ansi--color-3bit-code (r g b &optional background)
+  "Convert the (R G B) colour code to a correspanding 4bit ansi escape sequence."
+  (format "\uE000[%sm"
+          (% (pcase (nth (org-ansi--color-rbg-to-256 r g b)
+                         org-ansi--256-to-16-map)) 8)))
+
+;;;;;; 4-bit / 16-color
+
+(defvar org-ansi--256-to-16-map
+  '(0   1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+        0   4  4  4 12 12  2  6  4  4 12 12  2  2  6  4
+        12 12  2  2  2  6 12 12 10 10 10 10 14 12 10 10
+        10 10 10 14  1  5  4  4 12 12  3  8  4  4 12 12
+        2   2  6  4 12 12  2  2  2  6 12 12 10 10 10 10
+        14 12 10 10 10 10 10 14  1  1  5  4 12 12  1  1
+        5   4 12 12  3  3  8  4 12 12  2  2  2  6 12 12
+        10 10 10 10 14 12 10 10 10 10 10 14  1  1  1  5
+        12 12  1  1  1  5 12 12  1  1  1  5 12 12  3  3
+        3   7 12 12 10 10 10 10 14 12 10 10 10 10 10 14
+        9   9  9  9 13 12  9  9  9  9 13 12  9  9  9  9
+        13 12  9  9  9  9 13 12 11 11 11 11  7 12 10 10
+        10 10 10 14  9  9  9  9  9 13  9  9  9  9  9 13
+        9   9  9  9  9 13  9  9  9  9  9 13  9  9  9  9
+        9  13 11 11 11 11 11 15  0  0  0  0  0  0  8  8
+        8   8  8  8  7  7  7  7  7  7 15 15 15 15 15 15))
+
+(defun org-ansi--color-4bit-code (r g b &optional background)
+  "Convert the (R G B) colour code to a correspanding 4bit ansi escape sequence."
+  (format "\uE000[%sm"
+          (pcase (nth (org-ansi--color-rbg-to-256 r g b)
+                      org-ansi--256-to-16-map)
+            ((and (pred (> 8)) n)
+             (+ 30 (if background 10 0) n))
+            (n
+             (format "1;%d" (+ 22 (if background 10 0) n))))))
+
+;;;;;; 8-bit / 256-color
+
+(defvar org-ansi--color-6cube-values '(0 95 135 175 215 255))
+(defun org-ansi--color-to-6cube (value)
+  "Map VALUE to the associated 6x6 colour cube value."
+  (pcase value
+    ((pred (> 48)) 0)
+    ((pred (> 114)) 1)
+    (_ (/ (- value 35) 40))))
+
+(defun org-ansi--color-8bit-code (r g b &optional background)
+  "Convert the (R G B) colour code to a correspanding 8bit ansi escape sequence."
+  (format (if background "\uE000[48;5;%dm" "\uE000[38;5;%dm")
+          (org-ansi--color-rbg-to-256 r g b)))
+
+(defun org-ansi--color-rbg-to-256 (r g b &optional background)
+  "Convert the (R G B) colour code to the nearest 256-colour."
+  (let ((6cube-r (org-ansi--color-to-6cube r))
+        (6cube-g (org-ansi--color-to-6cube g))
+        (6cube-b (org-ansi--color-to-6cube b)))
+    (let ((nearest-r (nth 6cube-r org-ansi--color-6cube-values))
+          (nearest-g (nth 6cube-g org-ansi--color-6cube-values))
+          (nearest-b (nth 6cube-b org-ansi--color-6cube-values)))
+      (if (and (= nearest-r r) (= nearest-g g) (= nearest-b b))
+          (+ 16 (* 36 6cube-r) (* 6 6cube-g) 6cube-b)
+        (let* ((grey-avg (/ (+ r g b) 3))
+               (grey-index (if (> grey-avg 238) 23
+                             (/ (- grey-avg 3) 10)))
+               (grey (+ 8 (* 10 grey-index))))
+          (if (> (org-ansi--color-dist-squared (list grey grey grey)
+                                               (list r g b))
+                 (org-ansi--color-dist-squared (list nearest-r nearest-g nearest-b)
+                                               (list r g b)))
+              (+ 232 grey-index)
+            (+ 16 (* 36 6cube-r) (* 6 6cube-g) 6cube-b)))))))
+
+
+;;;;;; 24-bit / 16m-color
+
+(defun org-ansi--color-24bit-code (r g b &optional background)
+  (format (if background "\uE000[48;2;%d;%d;%dm" "\uE000[38;2;%d;%d;%dm") r g b))
+
+;;;; Helper functions
+
 (defun org-ansi--build-title
     (element info text-width &optional underline notags toc)
   "Format ELEMENT title and return it.
