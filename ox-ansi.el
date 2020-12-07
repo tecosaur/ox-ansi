@@ -2326,43 +2326,6 @@ Return output file's name."
   (interactive)
   (let ((file (org-export-output-file-name ".txt" subtreep)))
     (org-export-to-file 'ansi file
-
-;;;###autoload
-(defun org-ansi-publish-to-ansi (plist filename pub-dir)
-  "Publish an Org file to ASCII.
-
-FILENAME is the filename of the Org file to be published.  PLIST
-is the property list for the given project.  PUB-DIR is the
-publishing directory.
-
-Return output file name."
-  (org-publish-org-to
-   'ansi filename ".txt" `(:ansi-charset ansi ,@plist) pub-dir))
-
-;;;###autoload
-(defun org-ansi-publish-to-latin1 (plist filename pub-dir)
-  "Publish an Org file to Latin-1.
-
-FILENAME is the filename of the Org file to be published.  PLIST
-is the property list for the given project.  PUB-DIR is the
-publishing directory.
-
-Return output file name."
-  (org-publish-org-to
-   'ansi filename ".txt" `(:ansi-charset latin1 ,@plist) pub-dir))
-
-;;;###autoload
-(defun org-ansi-publish-to-utf8 (plist filename pub-dir)
-  "Publish an org file to UTF-8.
-
-FILENAME is the filename of the Org file to be published.  PLIST
-is the property list for the given project.  PUB-DIR is the
-publishing directory.
-
-Return output file name."
-  (org-publish-org-to
-   'ansi filename ".txt" `(:ansi-charset utf-8 ,@plist) pub-dir))
-
       async subtreep visible-only body-only ext-plist
       (lambda (out-file) ; FIXME (grumble) why do I need sed for this?
         (start-process "" nil "sed" "-i" "s/\\xee/\\x1b/g" file)
