@@ -134,6 +134,7 @@
     (:ansi-table-use-ansi-art nil nil org-ansi-table-use-ansi-art)
     (:ansi-table-widen-columns nil nil org-ansi-table-widen-columns)
     (:ansi-text-width nil nil org-ansi-text-width)
+    (:ansi-box-style nil nil org-ansi-box-style)
     (:ansi-verbatim-format nil nil org-ansi-verbatim-format)))
 
 
@@ -294,6 +295,20 @@ available through, e.g., GNU ELPA."
 Otherwise, place it right after it."
   :group 'org-export-ansi
   :type 'boolean)
+
+(defcustom org-ansi-box-style 'minimal
+  "Style of surroundind box to use.
+Possible values are:
+`none'     No box
+`minimal'  Just a side gutter
+`boxed'    Box with square corners
+`rounded'  Box with rounded corners"
+  :group 'org-export-ansi
+  :type '(choice
+          (const :tag "No box" none)
+          (const :tag "Just side gutter" minimal)
+          (const :tag "Box with square corners" boxed)
+          (const :tag "Box with rounded corners" rounded)))
 
 (defcustom org-ansi-verbatim-format "`%s'"
   "Format string used for verbatim text and inline code."
@@ -490,15 +505,29 @@ Empty lines are not indented."
     (replace-regexp-in-string
      "\\(^\\)[ \t]*\\S-" (make-string width ?\s) s nil nil 1)))
 
-(defun org-ansi--box-string (s info)
+(defun org-ansi--box-string (s info style)
   "Return string S with a partial box to its left.
 INFO is a plist used as a communication channel."
   (let ((utf8p (eq (plist-get info :ansi-charset) 'utf-8)))
-    (format (if utf8p "┌────\n%s\n└────" ",----\n%s\n`----")
-            (replace-regexp-in-string
-             "^" (if utf8p "│ " "| ")
-             ;; Remove last newline character.
-             (replace-regexp-in-string "\n[ \t]*\\'" "" s)))))
+    (let ((box-main (if utf8p
+                        (pcase style
+                          ('boxy "┌────\n%s\n└────")
+                          ('rounded "┌────\n%s\n└────")
+                          ((or 'minimal 'none) "%s"))
+                      (pcase style
+                        ('(boxy rounded) ",----\n%s\n`----")
+                        ('(minimal none) "%s"))))
+          (box-left (if utf8p
+                        (pcase style
+                          ((or 'boxy 'rounded) "│ ")
+                          ('minimal "┆ ")
+                          ('none ""))
+                      (pcase style
+                        ('(boxy rounded minimal) "| ")))))
+      (format box-main
+              (replace-regexp-in-string
+               "^" box-left
+               (replace-regexp-in-string "\n[ \t]*\\'" "" s))))))
 
 (defun org-ansi--current-text-width (element info)
   "Return maximum text width for ELEMENT's contents.
@@ -1336,7 +1365,8 @@ contextual information."
 CONTENTS is nil.  INFO is a plist holding contextual information."
   (org-ansi--justify-element
    (org-ansi--box-string
-    (org-export-format-code-default example-block info) info)
+    (org-export-format-code-default example-block info) info
+    (plist-get info :ansi-box-style))
    example-block info))
 
 
@@ -1368,7 +1398,8 @@ CONTENTS is nil.  INFO is a plist holding contextual information."
    (org-ansi--box-string
     (org-remove-indentation
      (org-element-property :value fixed-width))
-    info)
+    info
+    (plist-get info :ansi-box-style))
    fixed-width info))
 
 
