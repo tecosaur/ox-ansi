@@ -134,7 +134,6 @@
     (:ansi-table-use-ansi-art nil nil org-ansi-table-use-ansi-art)
     (:ansi-table-widen-columns nil nil org-ansi-table-widen-columns)
     (:ansi-text-width nil nil org-ansi-text-width)
-    (:ansi-underline nil nil org-ansi-underline)
     (:ansi-verbatim-format nil nil org-ansi-verbatim-format)))
 
 
@@ -234,32 +233,6 @@ Possible values are:
           (const :tag "ASCII" ascii)
           (const :tag "Latin-1" latin1)
           (const :tag "UTF-8" utf-8)))
-
-(defcustom org-ansi-underline '((ansi ?= ?~ ?-)
-                                      (latin1 ?= ?~ ?-)
-                                      (utf-8 ?═ ?─ ?╌ ?┄ ?┈))
-  "Characters for underlining headings in ASCII export.
-
-Alist whose key is a symbol among `ansi', `latin1' and `utf-8'
-and whose value is a list of characters.
-
-For each supported charset, this variable associates a sequence
-of underline characters.  In a sequence, the characters will be
-used in order for headlines level 1, 2, ...  If no character is
-available for a given level, the headline won't be underlined."
-  :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
-  :type '(list
-          (cons :tag "Underline characters sequence"
-                (const :tag "ASCII charset" ansi)
-                (repeat character))
-          (cons :tag "Underline characters sequence"
-                (const :tag "Latin-1 charset" latin1)
-                (repeat character))
-          (cons :tag "Underline characters sequence"
-                (const :tag "UTF-8 charset" utf-8)
-                (repeat character))))
 
 (defcustom org-ansi-bullets '((ascii ?* ?+ ?-)
                               (latin1 ?§ ?¶)
@@ -819,19 +792,7 @@ possible.  It doesn't apply to `inlinetask' elements."
         (format " %%%ds"
                 (max (- text-width  (1+ (string-width first-part)))
                      (string-width tags)))
-        tags))
-     ;; Maybe underline text, if ELEMENT type is `headline' and an
-     ;; underline character has been defined.
-     (when (and underline headlinep)
-       (let ((under-char
-              (nth (1- (org-export-get-relative-level element info))
-                   (cdr (assq (plist-get info :ansi-charset)
-                              (plist-get info :ansi-underline))))))
-         (and under-char
-              (concat "\n"
-                      (make-string (/ (string-width first-part)
-                                      (char-width under-char))
-                                   under-char))))))))
+        tags)))))
 
 (defun org-ansi--has-caption-p (element _info)
   "Non-nil when ELEMENT has a caption affiliated keyword.
