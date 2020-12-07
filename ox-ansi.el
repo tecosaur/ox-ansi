@@ -24,6 +24,10 @@
 (require 'cl-lib)
 (require 'ox-ascii)
 
+;;; Function Declarations
+
+(declare-function aa2u "ext:ascii-art-to-unicode" ())
+
 ;;; Define Back-End
 ;;
 ;; The following setting won't allow modifying preferred charset
@@ -85,13 +89,13 @@
     (verbatim . org-ansi-verbatim)
     (verse-block . org-ansi-verse-block))
   :menu-entry
-  '(?t "Export to Plain Text"
+  '(?t "Export to ANSI-fied Plain Text"
        ((?A "As ASCII buffer"
             (lambda (a s v b)
-              (org-ansi-export-as-ansi a s v b '(:ansi-charset ansi))))
+              (org-ansi-export-as-ansi a s v b '(:ansi-charset ascii))))
         (?a "As ASCII file"
             (lambda (a s v b)
-              (org-ansi-export-to-ansi a s v b '(:ansi-charset ansi))))
+              (org-ansi-export-to-ansi a s v b '(:ansi-charset ascii))))
         (?L "As Latin1 buffer"
             (lambda (a s v b)
               (org-ansi-export-as-ansi a s v b '(:ansi-charset latin1))))
@@ -138,8 +142,8 @@
 ;;; User Configurable Variables
 
 (defgroup org-export-ansi nil
-  "Options for exporting Org mode files to ASCII."
-  :tag "Org Export ASCII"
+  "Options for exporting Org mode files to ANSI (ASCII)."
+  :tag "Org Export ANSI"
   :group 'org-export)
 
 (defcustom org-ansi-text-width 72
@@ -147,23 +151,17 @@
 This number includes margin size, as set in
 `org-ansi-global-margin'."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'integer)
 
-(defcustom org-ansi-global-margin 0
+(defcustom org-ansi-global-margin 1
   "Width of the left margin, in number of characters."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'integer)
 
 (defcustom org-ansi-inner-margin 2
   "Width of the inner margin, in number of characters.
 Inner margin is applied between each headline."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'integer)
 
 (defcustom org-ansi-quote-margin 6
@@ -171,8 +169,6 @@ Inner margin is applied between each headline."
 This margin is applied on both sides of the text.  It is also
 applied on the left side of contents in descriptive lists."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'integer)
 
 (defcustom org-ansi-list-margin 0
@@ -180,16 +176,12 @@ applied on the left side of contents in descriptive lists."
 This margin applies to top level list only, not to its
 sub-lists."
   :group 'org-export-ansi
-  :version "26.1"
-  :package-version '(Org . "8.3")
   :type 'integer)
 
 (defcustom org-ansi-inlinetask-width 30
   "Width of inline tasks, in number of characters.
 This number ignores any margin."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'integer)
 
 (defcustom org-ansi-headline-spacing '(1 . 2)
@@ -203,8 +195,6 @@ contents.
 A nil value replicates the number of blank lines found in the
 original Org buffer at the same place."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type '(choice
           (const :tag "Replicate original spacing" nil)
           (cons :tag "Set a uniform spacing"
@@ -219,8 +209,6 @@ a section, in which case indentation is removed from that line.
 If it is the symbol `auto' preserve indentation from original
 document."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type '(choice
           (integer :tag "Number of white spaces characters")
           (const :tag "Preserve original width" auto)))
@@ -231,23 +219,19 @@ If the value is an integer, add this number of blank lines
 between contiguous paragraphs.  If is it the symbol `auto', keep
 the same number of blank lines as in the original document."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type '(choice
           (integer :tag "Number of blank lines")
           (const :tag "Preserve original spacing" auto)))
 
-(defcustom org-ansi-charset 'ansi
+(defcustom org-ansi-charset 'utf-8
   "The charset allowed to represent various elements and objects.
 Possible values are:
-`ansi'    Only use plain ASCII characters
+`ascii'    Only use plain ASCII characters
 `latin1'   Include Latin-1 characters
 `utf-8'    Use all UTF-8 characters"
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type '(choice
-          (const :tag "ASCII" ansi)
+          (const :tag "ASCII" ascii)
           (const :tag "Latin-1" latin1)
           (const :tag "UTF-8" utf-8)))
 
@@ -277,9 +261,9 @@ available for a given level, the headline won't be underlined."
                 (const :tag "UTF-8 charset" utf-8)
                 (repeat character))))
 
-(defcustom org-ansi-bullets '((ansi ?* ?+ ?-)
-                                    (latin1 ?§ ?¶)
-                                    (utf-8 ?◊))
+(defcustom org-ansi-bullets '((ascii ?* ?+ ?-)
+                              (latin1 ?§ ?¶)
+                              (utf-8 ?◊))
   "Bullet characters for headlines converted to lists in ASCII export.
 
 Alist whose key is a symbol among `ansi', `latin1' and `utf-8'
@@ -292,11 +276,9 @@ here, the list will be repeated.
 Note that this variable doesn't affect plain lists
 representation."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type '(list
           (cons :tag "Bullet characters for low level headlines"
-                (const :tag "ASCII charset" ansi)
+                (const :tag "ASCII charset" ascii)
                 (repeat character))
           (cons :tag "Bullet characters for low level headlines"
                 (const :tag "Latin-1 charset" latin1)
@@ -310,8 +292,6 @@ representation."
 When nil, the link will be exported in place.  If the line
 becomes long in this way, it will be wrapped."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'boolean)
 
 (defcustom org-ansi-table-keep-all-vertical-lines nil
@@ -319,8 +299,6 @@ becomes long in this way, it will be wrapped."
 When nil, vertical lines will be removed except for those needed
 for column grouping."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'boolean)
 
 (defcustom org-ansi-table-widen-columns t
@@ -328,8 +306,6 @@ for column grouping."
 When nil, narrowed columns will look in ASCII export just like in
 Org mode, i.e. with \"=>\" as ellipsis."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'boolean)
 
 (defcustom org-ansi-table-use-ansi-art nil
@@ -338,23 +314,17 @@ It only makes sense when export charset is `utf-8'.  It is nil by
 default since it requires \"ansi-art-to-unicode.el\" package,
 available through, e.g., GNU ELPA."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'boolean)
 
 (defcustom org-ansi-caption-above nil
   "When non-nil, place caption string before the element.
 Otherwise, place it right after it."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'boolean)
 
 (defcustom org-ansi-verbatim-format "`%s'"
   "Format string used for verbatim text and inline code."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'string)
 
 (defcustom org-ansi-format-drawer-function
@@ -371,8 +341,6 @@ nil to ignore the drawer.
 
 The default value simply returns the value of CONTENTS."
   :group 'org-export-ansi
-  :version "24.4"
-  :package-version '(Org . "8.0")
   :type 'function)
 
 (defcustom org-ansi-format-inlinetask-function
@@ -393,8 +361,6 @@ The function must accept nine parameters:
 The function should return either the string to be exported or
 nil to ignore the inline task."
   :group 'org-export-ansi
-  :version "26.1"
-  :package-version '(Org . "8.3")
   :type 'function)
 
 
