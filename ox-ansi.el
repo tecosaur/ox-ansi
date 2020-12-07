@@ -363,11 +363,32 @@ nil to ignore the inline task."
   :group 'org-export-ansi
   :type 'function)
 
+;;; ansi extras
+
+(defcustom org-ansi-use-face-colours t
+  "Whether to grab colors from the relevant faces."
+  :type 'boolean)
+
+(defcustom org-ansi-color-mode '8-bit
+  "The ansi escape mode set to use.
+This accepts both n-bit and m-color forms.
+
+Possible values are:
+- `3-bit'  (`8-color')
+- `4-bit'  (`16-color')
+- `8-bit'  (`256-color')
+- `24-bit' (`16m-color')"
+  :type '(choice
+          (const 3-bit)
+          (const 4-bit)
+          (const 8-bit)
+          (const 24-bit))
+  :group 'org-export-ansi)
 
 
 ;;; Internal Functions
 
-;; Internal functions fall into three categories.
+;; Internal functions fall into four categories.
 
 ;; The first one is about text formatting.  The core functions are
 ;; `org-ansi--current-text-width' and
@@ -388,7 +409,12 @@ nil to ignore the inline task."
 ;; returns a list of referenceable src-block elements, and
 ;; `org-ansi--list-tables' does the same for table elements.
 
-;; The third category includes general helper functions.
+;; The third category provides functions that translate emacs face
+;; properties into (escaped) ansi escape sequences. The main function is
+;; `org-ansi--face-code' which calls functions such as
+;; `org-ansi--color-to-ansi'.
+
+;; The fourth category includes general helper functions.
 ;; `org-ansi--build-title' creates the title for a given headline
 ;; or inlinetask element.  `org-ansi--build-caption' returns the
 ;; caption string associated to a table or a src-block.
@@ -587,6 +613,51 @@ Return value is a symbol among `left', `center', `right' and
            (cond ((string= name "JUSTIFYRIGHT") (setq justification 'right))
                  ((string= name "JUSTIFYLEFT") (setq justification 'left)))))))
     (or justification 'left)))
+
+;;;; Face formatting
+
+(defvar org-ansi--face-nesting nil)
+
+(defun org-ansi--face-code (face default)
+  "Symbol for the FACE being emulated, and a DEFAULT style plist to emulate.
+DEFAULT is expected to mirror the output of `face-attribute'.
+
+In order for a face attribute to be mirrored, it must be present in DEFAULT.
+Each value in default should be an escaped ansi escape string --- \"\uE000...\"."
+  (concat
+   (org-ansi-face-attribute
+    face default :weight
+    (when (member (face-attribute face :weight nil t) '(bold extra-bold)) "\uE000[1m"))
+   (org-ansi-face-attribute
+    face default :slant
+    (when (eq 'italic (face-attribute face :slant nil t)) "\uE000[3m"))
+   (org-ansi-face-attribute
+    face default :underline
+    (when (eq t (face-attribute face :underline nil t)) "\uE000[4m"))
+   (org-ansi-face-attribute
+    face default :foreground
+    (when org-ansi-use-face-colours
+      (org-ansi--color-to-ansi
+       (face-attribute face :foreground nil t))))
+   (org-ansi-face-attribute
+    face default :background
+    (when org-ansi-use-face-colours
+      (org-ansi--color-to-ansi
+       (face-attribute face :background nil t) t)))))
+
+(defmacro org-ansi-face-attribute (face default prop &rest body)
+  `(when (plist-get default ,prop)
+     (or ,@body
+         (if (eq (plist-get default ,prop) '_) nil
+           (plist-get default ,prop)))))
+
+(defun org-ansi-apply-face (content face &optional default)
+  "TODO record faces, and use `org-ansi--face-nesting' to diff properties
+with parent form more intelligent use of escape codes, and renewing properties which
+are collateral damage from \"[0m\"."
+  (let* ((default (or default '(:foreground _ :background _ :weight _ :slant _ :underline _)))
+         (face-str (if face (org-ansi--face-code face default) "")))
+    (concat face-str content (if (string= face-str "") "" "\uE000[0m"))))
 
 (defun org-ansi--build-title
     (element info text-width &optional underline notags toc)
