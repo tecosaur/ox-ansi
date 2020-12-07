@@ -1136,29 +1136,30 @@ INFO is a plist used as a communication channel."
         ;; Title block without a title.  DATE is positioned at the top
         ;; right of the document, AUTHOR to the top left and EMAIL
         ;; just below.
-        (cond
-         ((and (org-string-nw-p date) (org-string-nw-p author))
-          (concat
-           author
-           (make-string (- text-width (string-width date) (string-width author))
-                        ?\s)
-           date
-           (when (org-string-nw-p email) (concat "\n" email))
-           "\n\n\n"))
-         ((and (org-string-nw-p date) (org-string-nw-p email))
-          (concat
-           email
-           (make-string (- text-width (string-width date) (string-width email))
-                        ?\s)
-           date "\n\n\n"))
-         ((org-string-nw-p date)
-          (concat
-           (org-ansi--justify-lines date text-width 'right)
-           "\n\n\n"))
-         ((and (org-string-nw-p author) (org-string-nw-p email))
-          (concat author "\n" email "\n\n\n"))
-         ((org-string-nw-p author) (concat author "\n\n\n"))
-         ((org-string-nw-p email) (concat email "\n\n\n")))
+        (when with-title
+          (cond
+           ((and (org-string-nw-p date) (org-string-nw-p author))
+            (concat
+             author
+             (make-string (- text-width (string-width date) (string-width author))
+                          ?\s)
+             date
+             (when (org-string-nw-p email) (concat "\n" email))
+             "\n\n\n"))
+           ((and (org-string-nw-p date) (org-string-nw-p email))
+            (concat
+             email
+             (make-string (- text-width (string-width date) (string-width email))
+                          ?\s)
+             date "\n\n\n"))
+           ((org-string-nw-p date)
+            (concat
+             (org-ansi--justify-lines date text-width 'right)
+             "\n\n\n"))
+           ((and (org-string-nw-p author) (org-string-nw-p email))
+            (concat author "\n" email "\n\n\n"))
+           ((org-string-nw-p author) (concat author "\n\n\n"))
+           ((org-string-nw-p email) (concat email "\n\n\n"))))
       ;; Title block with a title.  Document's TITLE, along with the
       ;; AUTHOR and its EMAIL are both overlined and an underlined,
       ;; centered.  Date is just below, also centered.
