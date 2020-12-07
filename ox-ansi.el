@@ -373,6 +373,17 @@ Possible values are:
           (const 24-bit))
   :group 'org-export-ansi)
 
+;; TODO make the following uneeded
+(defcustom org-ansi-auto-par-fill nil
+  "Due to the effect of ansi escape sequences on string length,
+reflowing a paragraph to `org-ansi-text-width' is quite dodgy
+at this point in time.  To re-enable it set this to `t'.
+
+I hope to be able to remove this setting at some point in the
+near future."
+  :type 'boolean
+  :group 'org-export-ansi)
+
 
 ;;; Internal Functions
 
@@ -412,6 +423,17 @@ Possible values are:
 ;; Eventually, `org-ansi--translate' translates a string according
 ;; to language and charset specification.
 
+(defun org-ansi--adjusted-current-fill-column ()
+  "We need to modify the fill column to account for our ansi escape sequences.
+FIXME this currently doesn't work as intended."
+  (let ((line-str (thing-at-point 'line t))
+        (start-pos 0))
+    (+ fill-column
+       (cl-loop for match-pos
+                = (string-match "\\(\uE000[A-Za-z0-9;\\[]+m\\)" line-str start-pos)
+                while match-pos
+                sum (length (match-string 1 line-str))
+                do (setf start-pos (1+ match-pos))))))
 
 (defun org-ansi--fill-string (s text-width info &optional justify)
   "Fill a string with specified text-width and return it.
@@ -436,7 +458,9 @@ Return nil if S isn't a string."
           (insert (if (plist-get info :preserve-breaks)
                       (replace-regexp-in-string "\n" hard-newline s)
                     s))
-          (fill-region (point-min) (point-max) justify))
+          (cl-flet ((current-fill-column
+                     () (org-ansi--adjusted-current-fill-column)))
+            (fill-region (point-min) (point-max) justify)))
         (buffer-string)))))
 
 (defun org-ansi--justify-lines (s text-width how)
@@ -466,7 +490,7 @@ that is according to the widest non blank line in CONTENTS."
     (let ((text-width (org-ansi--current-text-width element info))
           (how (org-ansi--current-justification element)))
       (cond
-       ((eq (org-element-type element) 'paragraph)
+       ((and (eq (org-element-type element) 'paragraph) org-ansi-auto-par-fill)
         ;; Paragraphs are treated specially as they need to be filled.
         (org-ansi--fill-string contents text-width info how))
        ((eq how 'left) contents)
