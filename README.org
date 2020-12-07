@@ -13,7 +13,9 @@ inclusion. Then you can use =ox-pandox= to create a man page, /and/
 
 One could term this the /holy trinity/ of script documentation 😉.
 
-* Instillation
+[[file:screenshot.png]]
+
+* Installation
 ** Straight
 #+begin_src emacs-lisp
 (use-package ox-ansi
