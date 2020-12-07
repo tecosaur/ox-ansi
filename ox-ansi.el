@@ -1943,14 +1943,179 @@ contextual information."
   (let ((caption (org-ansi--build-caption src-block info))
         (caption-above-p (plist-get info :ansi-caption-above))
         (code (org-export-format-code-default src-block info)))
+
     (if (equal code "") ""
       (org-ansi--justify-element
        (concat
         (and caption caption-above-p (concat caption "\n"))
-        (org-ansi--box-string code info)
+        (org-ansi--box-string
+         (org-ansi-format-code src-block info)
+         info (plist-get info :ansi-box-style))
         (and caption (not caption-above-p) (concat "\n" caption)))
        src-block info))))
 
+(defun org-ansi-format-code (element info)
+  "Format contents of ELEMENT as source code.
+ELEMENT is either an example or a source block.  INFO is a plist
+used as a communication channel."
+  (let* ((lang (org-element-property :language element))
+         ;; Extract code and references.
+         (code-info (org-export-unravel-code element))
+         (code (car code-info))
+         (refs (cdr code-info))
+         ;; Does the source block contain labels?
+         (retain-labels (org-element-property :retain-labels element))
+         ;; Does it have line numbers?
+         (num-start (org-export-get-loc element info)))
+    (org-ansi-do-format-code code lang refs retain-labels num-start)))
+
+(defun org-ansi-do-format-code
+    (code &optional lang refs retain-labels num-start)
+  "Format CODE string as source code.
+Optional arguments LANG, REFS, RETAIN-LABELS, NUM-START
+are, respectively, the language of the source code, as a string, an
+alist between line numbers and references (as returned by
+`org-export-unravel-code'), a boolean specifying if labels should
+appear in the source code, and the number associated to the first
+line of code."
+  (let* ((code-lines (split-string code "\n"))
+         (code-length (length code-lines))
+         (num-fmt
+          (and num-start
+               (format "%%%ds: "
+                       (length (number-to-string (+ code-length num-start))))))
+         (code (org-ansi-fontify-code code lang)))
+    (org-export-format-code
+     code
+     (lambda (loc line-num ref)
+       (concat
+        ;; Add line number, if needed.
+        (when num-start
+          (org-ansi-apply-face (format num-fmt line-num) 'line-number))
+        ;; Transcoded src line.
+        loc
+        ;; Add label, if needed.
+        (when (and ref retain-labels) (format " (%s)" ref))))
+     num-start refs)))
+
+(defun org-ansi-fontify-code (code lang)
+  "Color CODE with information from font-lock.
+CODE is a string representing the source code to colorize.  LANG
+is the language used for CODE, as a string, or nil."
+  (when code
+    (if (not lang)
+        code ; No language.  Possibly an example block.
+      ;; Map language
+      (setq lang (or (assoc-default lang org-src-lang-modes) lang))
+      (let ((lang-mode (and lang (intern (format "%s-mode" lang)))))
+        (if (not (functionp lang-mode))
+            code ; Case 1: Language is not associated with any Emacs mode
+          ;; Case 2: Default.  Fontify code.
+          (setq code
+                (let ((inhibit-read-only t))
+                  (with-temp-buffer
+                    ;; Switch to language-specific mode.
+                    (delay-mode-hooks (funcall lang-mode))
+                    (insert code)
+                    ;; Remove formatting on newline characters.
+                    (save-excursion
+                      (let ((beg (point-min))
+                            (end (point-max)))
+                        (goto-char beg)
+                        (while (progn (end-of-line) (< (point) end))
+                          (put-text-property (point) (1+ (point)) 'face nil)
+                          (forward-char 1))))
+                    (org-src-mode)
+                    (set-buffer-modified-p nil)
+                    ;; ansify region.
+                    (org-ansi-ansify-region-for-paste
+                     (point-min) (point-max)))))
+          code)))))
+
+(defun org-ansi-ansify-region-for-paste (beg end)
+  "Convert the region between BEG and END to ANSI."
+  (let ((ansibuf (save-restriction
+                   (narrow-to-region beg end)
+                   (org-ansi-ansify-buffer-1))))
+    (unwind-protect
+        (with-current-buffer ansibuf
+          (buffer-string))
+      (kill-buffer ansibuf))))
+
+(defun org-ansi-ansify-buffer-1 ()
+  ;; Internal function; don't call it from outside this file.  Ansify
+  ;; current buffer, writing the resulting ANSI to a new buffer, and
+  ;; return it.
+  (save-excursion
+    ;; Protect against the hook changing the current buffer.
+    (save-excursion
+      (run-hooks 'ansify-before-hook))
+    ;; Convince font-lock support modes to fontify the entire buffer
+    ;; in advance.
+    (when (and (boundp 'jit-lock-mode)
+               (symbol-value 'jit-lock-mode))
+      (jit-lock-fontify-now (point-min) (point-max)))
+    (font-lock-ensure)
+
+    ;; It's important that the new buffer inherits default-directory
+    ;; from the current buffer.
+    (let ((ansibuf (generate-new-buffer (if (buffer-file-name)
+                                            (concat (file-name-nondirectory (buffer-file-name))
+                                                    ".txt")
+                                          "*ansi*")))
+          (completed nil))
+      (unwind-protect
+          (let (next-change text)
+            ;; This loop traverses and reads the source buffer, appending
+            ;; the resulting ANSI to ANSIBUF.  This method is fast
+            ;; because: 1) it doesn't require examining the text
+            ;; properties char by char (org-ansi-ansify-next-face-change is used
+            ;; to move between runs with the same face), and 2) it doesn't
+            ;; require frequent buffer switches, which are slow because
+            ;; they rebind all buffer-local vars.
+            (goto-char (point-min))
+            (while (not (eobp))
+              (setq next-change (org-ansi-ansify-next-face-change (point)))
+              (setq text (buffer-substring-no-properties (point) next-change))
+              ;; Don't bother writing anything if there's no text (this
+              ;; happens in invisible regions).
+              (when (> (length text) 0)
+                (princ (org-ansi-apply-face
+                        text
+                        (pcase (get-text-property (point) 'face)
+                          ((and (pred listp) (pred (lambda (f) (consp (car f)))) f) (cadar f))
+                          ((and (pred listp) f) (car f))
+                          (f f)))
+                       ansibuf))
+              (goto-char next-change)))
+
+        (setq completed t))
+      (if (not completed)
+          (kill-buffer ansibuf)
+        ansibuf))))
+
+(defun org-ansi-ansify-next-face-change (pos &optional limit)
+  ;; (ansify-next-change pos 'face limit) would skip over entire
+  ;; overlays that specify the `face' property, even when they
+  ;; contain smaller text properties that also specify `face'.
+  ;; Emacs display engine merges those faces, and so must we.
+  (or limit
+      (setq limit (point-max)))
+  (let ((next-prop (next-single-property-change pos 'face nil limit))
+        (overlay-faces (ansify-overlay-faces-at pos)))
+    (while (progn
+             (setq pos (next-overlay-change pos))
+             (and (< pos next-prop)
+                  (equal overlay-faces (ansify-overlay-faces-at pos)))))
+    (setq pos (min pos next-prop))
+    ;; Additionally, we include the entire region that specifies the
+    ;; `display' property.
+    (when (get-char-property pos 'display)
+      (setq pos (next-single-char-property-change pos 'display nil limit)))
+    pos))
+
+(defun ansify-overlay-faces-at (pos)
+  (delq nil (mapcar (lambda (o) (overlay-get o 'face)) (overlays-at pos))))
 
 ;;;; Statistics Cookie
 
