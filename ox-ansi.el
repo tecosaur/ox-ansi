@@ -15,8 +15,8 @@
 ;;
 ;;; Commentary:
 ;;
-;;  support for exporting Org files to plaintext files with ansi escape
-;;  code formatting
+;; An org exporter for ANSI escape-code formatted plaintext files.
+;; Built off the existing ascii export backend.
 ;;
 ;;; Code:
 
