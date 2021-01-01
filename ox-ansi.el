@@ -7,9 +7,8 @@
 ;; created: 2020-12-06
 ;; modified: 2020-12-06
 ;; Version: 0.0.1
-;; keywords: org export ansi ascii terminal
 ;; Homepage: https://github.com/tec/ox-ansi
-;; Package-Requires: ((emacs 27.1) (cl-lib "0.5"))
+;; Package-Requires: ((emacs "27.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -374,9 +373,11 @@ Possible values are:
 
 ;; TODO make the following uneeded
 (defcustom org-ansi-auto-par-fill nil
-  "Due to the effect of ansi escape sequences on string length,
+  "Whether to reflow paragraphs.
+
+Due to the effect of ansi escape sequences on string length,
 reflowing a paragraph to `org-ansi-text-width' is quite dodgy
-at this point in time.  To re-enable it set this to `t'.
+at this point in time.  To re-enable it set this to t.
 
 I hope to be able to remove this setting at some point in the
 near future."
@@ -529,7 +530,7 @@ Empty lines are not indented."
      "\\(^\\)[ \t]*\\S-" (make-string width ?\s) s nil nil 1)))
 
 (defun org-ansi--box-string (s info style)
-  "Return string S with a partial box to its left.
+  "Return string S with a partial box generated in a certain STYLE.
 INFO is a plist used as a communication channel."
   (let ((utf8p (eq (plist-get info :ansi-charset) 'utf-8)))
     (let ((box-main (if utf8p
@@ -671,6 +672,8 @@ Each value in default should be an escaped ansi escape string --- \"\uE000...\".
        (face-attribute face :background nil t) t)))))
 
 (defmacro org-ansi-face-attribute (face default prop &rest body)
+  "Test for the existance of a FACE attribute (PROP), and return it if it exists.
+Requires DEFAULT to exist too. Returns BODY instead if it evaluates to a non-nil value."
   `(when (plist-get default ,prop)
      (or ,@body
          (if (eq (plist-get default ,prop) '_) nil
@@ -2101,11 +2104,11 @@ is the language used for CODE, as a string, or nil."
   (or limit
       (setq limit (point-max)))
   (let ((next-prop (next-single-property-change pos 'face nil limit))
-        (overlay-faces (ansify-overlay-faces-at pos)))
+        (overlay-faces (ox-ansi-ansify-overlay-faces-at pos)))
     (while (progn
              (setq pos (next-overlay-change pos))
              (and (< pos next-prop)
-                  (equal overlay-faces (ansify-overlay-faces-at pos)))))
+                  (equal overlay-faces (ox-ansi-ansify-overlay-faces-at pos)))))
     (setq pos (min pos next-prop))
     ;; Additionally, we include the entire region that specifies the
     ;; `display' property.
@@ -2113,7 +2116,7 @@ is the language used for CODE, as a string, or nil."
       (setq pos (next-single-char-property-change pos 'display nil limit)))
     pos))
 
-(defun ansify-overlay-faces-at (pos)
+(defun ox-ansi-ansify-overlay-faces-at (pos)
   (delq nil (mapcar (lambda (o) (overlay-get o 'face)) (overlays-at pos))))
 
 ;;;; Statistics Cookie
