@@ -1,4 +1,4 @@
-;;; ox-ansi-ansi.el --- export with ansi escape code formatting -*- lexical-binding: t; -*-
+;;; ox-ansi.el --- Export with ansi escape code formatting -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2020 TEC
 ;;
@@ -2496,5 +2496,5 @@ Return output file's name."
         (start-process "" nil "sed" "-i" "s/\\xee/\\x1b/g" file)
         nil))))
 
-(provide 'ox-ansi-ansi)
-;;; ox-ansi-ansi.el ends here
+(provide 'ox-ansi)
+;;; ox-ansi.el ends here
