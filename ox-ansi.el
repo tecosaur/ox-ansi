@@ -21,6 +21,7 @@
 ;;; Code:
 
 (require 'ox)
+(require 'ox-ascii)
 (require 'cl-lib)
 
 ;;; Function Declarations
@@ -145,45 +146,45 @@
   :tag "Org Export ANSI"
   :group 'org-export)
 
-(defcustom org-ansi-text-width 72
+(defcustom org-ansi-text-width org-ascii-text-width
   "Maximum width of exported text.
 This number includes margin size, as set in
 `org-ansi-global-margin'."
   :group 'org-export-ansi
   :type 'integer)
 
-(defcustom org-ansi-global-margin 1
+(defcustom org-ansi-global-margin org-ascii-global-margin
   "Width of the left margin, in number of characters."
   :group 'org-export-ansi
   :type 'integer)
 
-(defcustom org-ansi-inner-margin 2
+(defcustom org-ansi-inner-margin org-ascii-inner-margin
   "Width of the inner margin, in number of characters.
 Inner margin is applied between each headline."
   :group 'org-export-ansi
   :type 'integer)
 
-(defcustom org-ansi-quote-margin 6
+(defcustom org-ansi-quote-margin org-ascii-quote-margin
   "Width of margin used for quoting text, in characters.
 This margin is applied on both sides of the text.  It is also
 applied on the left side of contents in descriptive lists."
   :group 'org-export-ansi
   :type 'integer)
 
-(defcustom org-ansi-list-margin 0
+(defcustom org-ansi-list-margin org-ascii-list-margin
   "Width of margin used for plain lists, in characters.
 This margin applies to top level list only, not to its
 sub-lists."
   :group 'org-export-ansi
   :type 'integer)
 
-(defcustom org-ansi-inlinetask-width 30
+(defcustom org-ansi-inlinetask-width org-ascii-inlinetask-width
   "Width of inline tasks, in number of characters.
 This number ignores any margin."
   :group 'org-export-ansi
   :type 'integer)
 
-(defcustom org-ansi-headline-spacing '(1 . 2)
+(defcustom org-ansi-headline-spacing org-ascii-headline-spacing
   "Number of blank lines inserted around headlines.
 
 This variable can be set to a cons cell.  In that case, its car
@@ -200,7 +201,7 @@ original Org buffer at the same place."
                 (integer :tag "Number of blank lines before contents")
                 (integer :tag "Number of blank lines after contents"))))
 
-(defcustom org-ansi-indented-line-width 'auto
+(defcustom org-ansi-indented-line-width org-ascii-indented-line-width
   "Additional indentation width for the first line in a paragraph.
 If the value is an integer, indent the first line of each
 paragraph by this width, unless it is located at the beginning of
@@ -212,7 +213,7 @@ document."
           (integer :tag "Number of white spaces characters")
           (const :tag "Preserve original width" auto)))
 
-(defcustom org-ansi-paragraph-spacing 'auto
+(defcustom org-ansi-paragraph-spacing org-ascii-paragraph-spacing
   "Number of white lines between paragraphs.
 If the value is an integer, add this number of blank lines
 between contiguous paragraphs.  If is it the symbol `auto', keep
@@ -260,28 +261,28 @@ representation."
                 (const :tag "UTF-8 charset" utf-8)
                 (repeat character))))
 
-(defcustom org-ansi-links-to-notes t
+(defcustom org-ansi-links-to-notes org-ascii-links-to-notes
   "Non-nil means convert links to notes before the next headline.
 When nil, the link will be exported in place.  If the line
 becomes long in this way, it will be wrapped."
   :group 'org-export-ansi
   :type 'boolean)
 
-(defcustom org-ansi-table-keep-all-vertical-lines nil
+(defcustom org-ansi-table-keep-all-vertical-lines org-ascii-table-keep-all-vertical-lines
   "Non-nil means keep all vertical lines in ASCII tables.
 When nil, vertical lines will be removed except for those needed
 for column grouping."
   :group 'org-export-ansi
   :type 'boolean)
 
-(defcustom org-ansi-table-widen-columns t
+(defcustom org-ansi-table-widen-columns org-ascii-table-widen-columns
   "Non-nil means widen narrowed columns for export.
 When nil, narrowed columns will look in ASCII export just like in
 Org mode, i.e. with \"=>\" as ellipsis."
   :group 'org-export-ansi
   :type 'boolean)
 
-(defcustom org-ansi-table-use-ansi-art nil
+(defcustom org-ansi-table-use-ansi-art org-ascii-table-use-ansi-art
   "Non-nil means \"table.el\" tables are turned into ASCII art.
 It only makes sense when export charset is `utf-8'.  It is nil by
 default since it requires \"ansi-art-to-unicode.el\" package,
@@ -289,7 +290,7 @@ available through, e.g., GNU ELPA."
   :group 'org-export-ansi
   :type 'boolean)
 
-(defcustom org-ansi-caption-above nil
+(defcustom org-ansi-caption-above org-ascii-caption-above
   "When non-nil, place caption string before the element.
 Otherwise, place it right after it."
   :group 'org-export-ansi
@@ -309,13 +310,12 @@ Possible values are:
           (const :tag "Box with square corners" boxed)
           (const :tag "Box with rounded corners" rounded)))
 
-(defcustom org-ansi-verbatim-format "`%s'"
+(defcustom org-ansi-verbatim-format org-ascii-verbatim-format
   "Format string used for verbatim text and inline code."
   :group 'org-export-ansi
   :type 'string)
 
-(defcustom org-ansi-format-drawer-function
-  (lambda (_name contents _width) contents)
+(defcustom org-ansi-format-drawer-function org-ascii-format-drawer-function
   "Function called to format a drawer in ASCII.
 
 The function must accept three parameters:
