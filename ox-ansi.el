@@ -22,7 +22,6 @@
 
 (require 'ox)
 (require 'cl-lib)
-(require 'ox-ascii)
 
 ;;; Function Declarations
 
