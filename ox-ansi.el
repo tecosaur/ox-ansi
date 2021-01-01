@@ -2,7 +2,7 @@
 ;;
 ;; Copyright (C) 2020 TEC
 ;;
-;; Author: TEC <http://github/tec>
+;; Author: TEC <http://github/tecosaur>
 ;; Maintainer: TEC <tec@tecosaur.com>
 ;; created: 2020-12-06
 ;; modified: 2020-12-06
