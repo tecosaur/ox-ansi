@@ -7,7 +7,7 @@ You know those fancy shell scripts that produce colourful and pretty output?
 Well, I *was* jealous. Not any more though --- I've taken Org's ASCII exporter and
 added [[https://en.wikipedia.org/wiki/ANSI_escape_code][ANSI escape codes]] all over the place.
 
-You can now write a /gougeous/ CLI help page in Org and use this to export it for
+You can now write a /gorgeous/ CLI help page in Org and use this to export it for
 inclusion. Then you can use =ox-pandox= to create a man page, /and/
 ~org-html-org-export-to-html~ for online documentation.
 
