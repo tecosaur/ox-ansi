@@ -281,7 +281,7 @@ Org mode, i.e. with \"=>\" as ellipsis."
   :group 'org-export-ansi
   :type 'boolean)
 
-(defcustom org-ansi-table-use-ansi-art org-ascii-table-use-ansi-art
+(defcustom org-ansi-table-use-ansi-art org-ascii-table-use-ascii-art
   "Non-nil means \"table.el\" tables are turned into ASCII art.
 It only makes sense when export charset is `utf-8'.  It is nil by
 default since it requires \"ansi-art-to-unicode.el\" package,
